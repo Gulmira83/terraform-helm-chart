@@ -43,3 +43,7 @@ variable "recreate_pods" {
    description = "(Required) Specify the exact chart version to install"
   
  }
+
+variable "remote_chart" {
+  default     = "false"
+}
