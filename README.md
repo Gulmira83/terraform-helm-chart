@@ -28,51 +28,56 @@ Tiller >= v2.11.0
 2. Make sure you have tiller installed on your  kubernetes cluster
 3. Make sure that terraform also installed and follows [Requirements](#Requirements)
 
-## Usage
+## Local Chart usage
 
 First you will need to create your own helm chart [link](https://docs.bitnami.com/kubernetes/how-to/create-your-first-helm-chart/). If you would like to quickly create helm chart then run
 
+Run following command to create `charts` folder and local chart `example`
+
 ```
-╭─ fsadykov ~
-╰─() mkdir -p deployments/terraform/charts && cd deployments/terraform
-╭─ fsadykov ~
-╰─() helm create charts/example
-Creating example
-╭─ fsadykov ~
-╰─() ls charts/example
-Chart.yaml  charts      templates   values.yaml
+mkdir charts && helm create charts/example
 ```
 
-After you created your helm chart you can go ahead and do modification inside `values.yaml`
+After you have local chart you should be able to create following file to deploy your charts `main.tf`
 
-when modification is done for `values.yaml` you will need to create `module.tf` to call the module 
-
-```hcl
-cat <<EOF >module.tf
-module "helm_deploy" {
-  source                 = "git::https://github.com/fuchicorp/helm-deploy.git"
+``` 
+module "local_helm_deployment" {
+  source                 = "fuchicorp/chart/helm"
   deployment_name        = "example-deployment"
   deployment_environment = "dev"
-  deployment_endpoint    = "example.fuchicorp.com"
+  deployment_endpoint    = "example.domain.com"
   deployment_path        = "example"
 }
-EOF
 ```
 
-follow the file path 
+After you have your helm chart you can go ahead and do modification inside `values.yaml` 
 
-```yaml
-./module.tf
-./charts/
-    /example ## Your chart location 
-      /Chart.yaml
-      /charts
-      /templates
-      /values.yaml
 ```
+ingress:
+  enabled: true
+  annotations: 
+    kubernetes.io/ingress.class: nginx
+  hosts:
+    - host: ${deployment_endpoint}
+```
+NOTE: `deployment_endpoint` will be replaced  to `example.domain.com`
 
 
+## Remote Chart usage
 
+For remote charts you need to create `main.tf` file only
+
+```
+module "remote_chart_deploy" {
+  source                 = "fuchicorp/chart/helm"
+  deployment_name        = "example-deployment"
+  deployment_environment = "dev"
+  deployment_endpoint    = "example.domain.com"
+  deployment_path        = "stable/wordpress"
+  release_version        = "9.0.3"
+  remote_chart           = "true"
+}
+```
 ## Variables
 
 For more info, please see the [variables file](variables.tf).
@@ -88,22 +93,21 @@ For more info, please see the [variables file](variables.tf).
 | `timeout` | If you would like to increase the timeout | `(Optional)` | `number` |
 | `recreate_pods` | On update performs pods restart for the resource if applicable. | `(Optional)` | `bool` |
 | `release_version` | Specify the exact chart version to install. | `(Required)` | `string` |
+| `remote_chart` | Used for only remote or local charts | `(Optional)` | `bool` |
+
+
 
 
 
 ## Custom variable deployment 
 
 ```
-module "helm_deploy" {
-  # source = "git::https://github.com/fuchicorp/helm-deploy.git"
-
-  source  = "../../helm-deploy"
-  timeout = "500"
-
-  deployment_name        = "artemis-deployment"
+module "local_helm_deployment" {
+  source                 = "fuchicorp/chart/helm"
+  deployment_name        = "example-deployment"
   deployment_environment = "dev"
-  deployment_endpoint    = "artemis.fuchicorp.com"
-  deployment_path        = "artemis"
+  deployment_endpoint    = "example.domain.com"
+  deployment_path        = "example"
 
   template_custom_vars = {
     deployment_image = "nginx"
@@ -111,25 +115,19 @@ module "helm_deploy" {
 }
 ```
 
-Every key and value you define inside `template_custom_vars` will used for your `values-template.yaml` in this case 
+Every key and value you define inside `template_custom_vars` will used for your `values.yaml` in this case 
 
-`deployment_image` value will replace inside file to `nginx` 
+NOTE: `deployment_image` value will replace inside file to `nginx` 
 
 ```
-╭─ fsadykov ~/Projects/fuchicorp-projects/terraform-modules/deploy-testing
-╰─(‹master*› ) cat charts/artemis/values.yaml| grep repository
   repository: ${deployment_image}
 ```
 
 Output file will be: 
 
 ```
-╭─ fsadykov ~/Projects/fuchicorp-projects/helm-deploy
-╰─(‹master*› ) cat .cache/values.yaml | grep reposit
   repository: nginx
 ```
-
-You can see the `repository` replaced to right value
 
 
 
